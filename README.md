@@ -190,3 +190,4 @@ This section describes the connection between the Duet3D 6HC main board and vari
 | DS_LED                         | NeoPixel Strip         | 3.3ft, 144 LED                                                                |
 
 > NOTE: Laser Adapter IO_9 "enable" will be high from the board, so the adapter's key safety interlock is important
+
