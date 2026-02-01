@@ -31,13 +31,13 @@ M586 P0 S1 ; configure HTTP
 
 ; Smart Drivers
 ;| DRIVER_0                       | X Axis Stepper         | Green to A1, Black to A2, Red to B1, Blue to B2                               |
-M569 P0.0 S1 D2 ; driver 0.0 goes forwards (X axis)
+M569 P0 S1 D2 ; driver 0.0 goes forwards (X axis)
 ;| DRIVER_1                       | Y1 Axis Stepper        | Green to A1, Black to A2, Red to B1, Blue to B2                               |
-M569 P0.1 S1 D2 ; driver 0.1 goes forwards (Y axis)
+M569 P1 S1 D2 ; driver 0.1 goes forwards (Y axis)
 ;| DRIVER_2                       | Y2 Axis Stepper        | Green to A1, Black to A2, Red to B1, Blue to B2                               |
-M569 P0.2 S1 D2 ; driver 0.2 goes forwards (Y axis)
+M569 P2 S1 D2 ; driver 0.2 goes forwards (Y axis)
 ;| DRIVER_3                       | Z Axis Stepper         | Green to A1, Black to A2, Red to B1, Blue to B2                               |
-M569 P0.3 S1 D2 ; driver 0.3 goes forwards (Z axis)
+M569 P3 S1 D2 ; driver 0.3 goes forwards (Z axis)
 
 ; Motor Idle Current Reduction
 M906 I30 ; set motor current idle factor
