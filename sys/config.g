@@ -73,8 +73,6 @@ G31 P500 X0 Y0 Z20 ; set Z probe trigger value, offset and trigger height
 ;| IO_4 | Tool Setter Safety | Green to "in", Blue to GND
 M950 J1 C"io4.in" ; Toolsetter safety input on IO_4
 M581 P1 T1 S1 ; Trigger 1 when safety opens (unsafe = input goes high)
-; TODO - add the following line to /sys/trigger1.g
-; M112   ; emergency stop
 ;| IO_5 | X-Axis Limits | Min/Max wired in series. Brown to VCC, Blue to GND, Black to "in" pin
 M574 X1 P"io5.in" S1 ; configure X axis endstop
 ;| IO_6 | Y-Axis Limits | Min/Max wired in series. Brown to VCC, Blue to GND, Black to "in" pin
