@@ -90,14 +90,10 @@ G10 P1 X0 Y0 Z0
 M308 S0 P"temp0" Y"null" ; disable heater monitoring on this header
 M950 J2 C"temp0" ; Cycle Start button on TEMP_0
 M581 P2 T2 S1
-; TODO: put the following line in /sys/trigger2.g
-; M24 ; resume/start job
 ;| TEMP_1 | Pause/Feed Hold Button
 M308 S1 P"temp1" Y"null" ; disable heater monitoring on this header
 M950 J3 C"temp1" ; Pause / Feed Hold button on TEMP_1
 M581 P3 T3 S1
-; TODO: put the following line in /sys/trigger3.g
-; M226 ; pause program and wait
 ;| OUT_1 | TBD | Likely contactor or relay addition
 ;| OUT_2 | TBD | Likely contactor or relay addition
 ;| OUT_3 | TBD | Likely contactor or relay addition
