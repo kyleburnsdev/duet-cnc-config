@@ -68,8 +68,9 @@ M150 P0 R0 U0 B20            ; soft blue startup color
 ;| IO_1 | Reserved | IO_1 shares resources with RS485 (modbus) which is needed for spindle control |
 ;| IO_2 | E-Stop | Red to "in" pin, black to GND
 ;| IO_3 | Tool Setter Probe | Brown to "in", Orange to GND
-M558 K1 P4 C"io3.in" H20 F150:49.8 T12000 R0.25 A3 S0.05 ; toolsetter as probe 1 (switch type)
-G31 P500 X0 Y0 Z20 S1 ; set Z probe trigger value, offset and trigger height
+M950 J0 C"io3.in" ; toolsetter input on IO_3
+; Example: trigger a macro when the input changes — adjust macro name/trigger as needed
+; M581 P4 T"toolsetter_macro" S1
 
 ;| IO_4 | Tool Setter Safety | Green to "in", Blue to GND
 M950 J1 C"io4.in" ; Toolsetter safety input on IO_4
@@ -89,18 +90,16 @@ M558 K0 P5 C"io8.in" H5 F300 T50             ; XYZ touch configured as Z probe 0
 G31 P500 X0 Y0 Z20                           ; Z probe 0 trigger/offset
 
 ;| IO_9 (PWM) | Laser Adapter | GND to Adapter "D" (GND) terminal, "out" to "B" (TTL), +5V to "C" (enable)
-M950 P1 C"io9.out" Q500        ; PWM output for laser TTL
-M563 P1 S"Laser" D1            ; define Tool 1 as the laser
-M452 C"io9.out" R255 F200      ; enable laser mode
+M950 P1 C"out9" Q500        ; PWM output for laser TTL
+M563 P1 S"Laser"            ; define Tool 1 as the laser
+M452 P1 R255 F200      ; enable laser mode
 G10 P1 X0 Y0 Z0
 
 ;| TEMP_0 | Cycle Start Button
-M308 S0 P"temp0" Y"null" ; disable heater monitoring on this header
 M950 J2 C"temp0" ; Cycle Start button on TEMP_0
 M581 P2 T2 S1
 
 ;| TEMP_1 | Pause/Feed Hold Button
-M308 S1 P"temp1" Y"null" ; disable heater monitoring on this header
 M950 J3 C"temp1" ; Pause / Feed Hold button on TEMP_1
 M581 P3 T3 S1
 
@@ -118,14 +117,15 @@ M106 P1 T45 H1:2:3
 
 ;| OUT_6 | Fan | Temperature driven to exhaust warm air from case
 M950 F2 C"out6"
-M106 P2 T45 H100
+M106 P2 S0.1 ; 10% "always on" for now. (later temp driven)
 
 ;| PANEL_DUE | Pendant | Planned custom pendant to be added in near future
 ;| RESET | Reset Button | Hard reset of controller (no config needed)
 ;| POWER IN | Meanwell LRS-350-24 | 24V Volt Power Supply (no config needed)
 
 ;| RS485 | Huanyang HY02D211B VFD RS485 | Red to A, Black to B
-M950 R0 C"rs485" L40000 Q9600 P"EVEN" ; --- RS485 Spindle (Tool 0) ---
+M575 P2 B9600 S7        ; enable RS485 on serial channel 2 (io1), 9600 bps, Modbus/device mode
+M950 R0 Q9600           ; create RS485 peripheral 0 (built-in transceiver → no C"port" required)
 M563 P0 S"Spindle" R0
 G10 P0 X0 Y0 Z0
 
