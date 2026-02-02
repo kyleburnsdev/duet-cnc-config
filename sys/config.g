@@ -68,8 +68,8 @@ M150 P0 R0 U0 B20            ; soft blue startup color
 ;| IO_1 | Reserved | IO_1 shares resources with RS485 (modbus) which is needed for spindle control |
 ;| IO_2 | E-Stop | Red to "in" pin, black to GND
 ;| IO_3 | Tool Setter Probe | Brown to "in", Orange to GND
-M558 K0 P5 C"io3.in" H20 F150:49.8 T12000 R0.25 A3 S0.05 ; configure digital probe via slot #0
-G31 P500 X0 Y0 Z20 ; set Z probe trigger value, offset and trigger height
+M558 K1 P4 C"io3.in" H20 F150:49.8 T12000 R0.25 A3 S0.05 ; toolsetter as probe 1 (switch type)
+G31 P500 X0 Y0 Z20 S1 ; set Z probe trigger value, offset and trigger height
 
 ;| IO_4 | Tool Setter Safety | Green to "in", Blue to GND
 M950 J1 C"io4.in" ; Toolsetter safety input on IO_4
@@ -85,7 +85,8 @@ M574 Y2 P"io6.in" S1 ; configure Y axis endstop
 M574 Z2 P"io7.in" S1 ; configure Z axis endstop
 
 ;| IO_8 | XYZ Touch Probe | Red to "in", Black to GND
-M558 K1 P5 C"io8.in" H5 F300 T50
+M558 K0 P5 C"io8.in" H5 F300 T50             ; XYZ touch configured as Z probe 0
+G31 P500 X0 Y0 Z20                           ; Z probe 0 trigger/offset
 
 ;| IO_9 (PWM) | Laser Adapter | GND to Adapter "D" (GND) terminal, "out" to "B" (TTL), +5V to "C" (enable)
 M950 P1 C"io9.out" Q500        ; PWM output for laser TTL
