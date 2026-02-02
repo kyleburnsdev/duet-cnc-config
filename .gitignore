@@ -1,0 +1,22 @@
+# --- Python Specifics ---
+# We ignore the virtual environment and compiled bytecode
+venv/
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- OS Specifics ---
+.DS_Store
+Thumbs.db
+
+# --- Duet/CNC Specifics ---
+# We generally ignore large G-Code project files (Relief carvings)
+# as they bloat the repo. Keep your CAM source/NC files elsewhere 
+# or only track small test files.
+/gcodes/
+
+# --- Sensitive Info ---
+# If you ever store your WiFi credentials in a file like wpa_supplicant.conf
+# or a secrets.py, make sure to ignore them!
+secrets.py
