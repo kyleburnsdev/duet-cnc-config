@@ -69,7 +69,7 @@ M150 P0 R0 U0 B20            ; soft blue startup color
 ;| IO_2 | E-Stop | Red to "in" pin, black to GND
 ;| IO_3 | Tool Setter Probe | Brown to "in", Orange to GND
 M950 J0 C"io3.in" ; toolsetter input on IO_3
-; Example: trigger a macro when the input changes — adjust macro name/trigger as needed
+; Example: trigger a macro when the input changes - adjust macro name/trigger as needed
 ; M581 P4 T"toolsetter_macro" S1
 
 ;| IO_4 | Tool Setter Safety | Green to "in", Blue to GND
@@ -125,7 +125,7 @@ M106 P2 S0.1 ; 10% "always on" for now. (later temp driven)
 
 ;| RS485 | Huanyang HY02D211B VFD RS485 | Red to A, Black to B
 M575 P2 B9600 S7        ; enable RS485 on serial channel 2 (io1), 9600 bps, Modbus/device mode
-M950 R0 Q9600           ; create RS485 peripheral 0 (built-in transceiver → no C"port" required)
+M950 R0 Q9600           ; create RS485 peripheral 0 (built-in transceiver - no C"port" required)
 M563 P0 S"Spindle" R0
 G10 P0 X0 Y0 Z0
 

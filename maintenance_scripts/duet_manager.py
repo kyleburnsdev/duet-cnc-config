@@ -29,7 +29,7 @@ def backup_machine():
     BACKUP_DIR.mkdir(exist_ok=True)
     zip_filename = f"duet_backup_{timestamp}.zip"
     zip_path = BACKUP_DIR / zip_filename
-    
+
     print(f"\n[!] Creating remote backup: {zip_filename}")
     try:
         with zipfile.ZipFile(zip_path, 'w') as backup_zip:
@@ -51,13 +51,13 @@ def check_drift(silent=False):
     """Symmetric comparison with newline-insensitive logic."""
     if not silent:
         print(f"\n--- Checking Drift (Machine: {DUET_HOST}) ---")
-    
+
     orphans, staged, modified = [], [], []
 
     for folder in TARGET_FOLDERS:
         local_folder = REPO_ROOT / folder
         local_files = {f.name for f in local_folder.glob('*.[gc]*')}
-        
+
         try:
             r = requests.get(get_url("rr_filelist", f"dir=0:/{folder}"), timeout=10)
             if r.status_code == 200:
@@ -79,10 +79,10 @@ def check_drift(silent=False):
                 # Read local using 'newline=""' to prevent Windows from altering \n
                 with open(local_folder / f, 'r', encoding='utf-8', newline='') as lf:
                     local_text = lf.read().splitlines()
-                
+
                 # Use .text.splitlines() for comparison (splitlines is newline-agnostic)
                 remote_text = resp.text.splitlines()
-                
+
                 if local_text != remote_text:
                     modified.append((folder, f))
                     if not silent:
@@ -98,17 +98,31 @@ def check_drift(silent=False):
 
 def push_to_machine():
     """Deploy Git version to the Machine."""
+    # Show drift details first for user confirmation
     check_drift()
     confirm = input("\nOVERWRITE Machine with Git files? (y/n): ")
     if confirm.lower() != 'y': return
 
+    # Recompute drift silently to know which files actually need uploading
     if backup_machine():
-        for folder in TARGET_FOLDERS:
-            for local_file in (REPO_ROOT / folder).glob('*.[gc]*'):
-                # Read raw bytes to preserve exact file structure
-                with open(local_file, 'rb') as f:
-                    requests.post(get_url("rr_upload", f"name=0:/{folder}/{local_file.name}"), data=f)
-                print(f"  Pushed: {local_file.name}")
+        _, staged, modified = check_drift(silent=True)
+        to_push = staged + modified
+
+        if not to_push:
+            print("✓ No local changes to push.")
+            return
+
+        for folder, name in to_push:
+            local_path = REPO_ROOT / folder / name
+            if not local_path.exists():
+                print(f"  Skipping missing local file: {folder}/{name}")
+                continue
+
+            with open(local_path, 'rb') as f:
+                # send raw bytes to the Duet upload endpoint
+                requests.post(get_url("rr_upload", f"name=0:/{folder}/{local_path.name}"), data=f.read())
+            print(f"  Pushed: {folder}/{local_path.name}")
+
         print("✓ Push complete.")
 
 def pull_from_machine():
