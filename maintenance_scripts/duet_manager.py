@@ -122,8 +122,29 @@ def push_to_machine():
 
     # Recompute drift silently to know which files actually need uploading
     if backup_machine():
-        _, staged, modified = check_drift(silent=True)
+        orphans, staged, modified = check_drift(silent=True)
         to_push = staged + modified
+
+        # Offer removal of orphan (remote-only) files with an extra confirmation
+        if orphans:
+            print(f"\nFound {len(orphans)} orphan file(s) on the machine:")
+            for folder, name in orphans:
+                print(f"  - {folder}/{name}")
+
+            print("\nTo remove these orphan files from the machine, type DELETE (case-sensitive).")
+            del_confirm = input("Type 'DELETE' to remove orphan files, or press Enter to keep them: ")
+            if del_confirm == 'DELETE':
+                for folder, name in orphans:
+                    try:
+                        # Attempt to delete the remote file. Using a GET for compatibility
+                        # with the rr_* endpoints; Duet may accept rr_delete or rr_rm.
+                        resp = requests.get(get_url("rr_delete", f"name=0:/{folder}/{name}"), timeout=10)
+                        if resp.status_code == 200:
+                            print(f"  Removed: {folder}/{name}")
+                        else:
+                            print(f"  FAILED to remove: {folder}/{name} (status: {resp.status_code})")
+                    except Exception as e:
+                        print(f"  ERROR removing {folder}/{name}: {e}")
 
         if not to_push:
             print("✓ No local changes to push.")
