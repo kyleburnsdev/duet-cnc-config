@@ -60,8 +60,9 @@ M669 K0 ; configure Cartesian kinematics
 ; *****************************
 
 ;| DS_LED | NeoPixel Strip | 3.3ft, 144 LED
-M150 X2 C"dsled" W144        ; define 144 LED NeoPixel strip
-M150 R0 U0 B20 P255          ; soft blue startup color
+M950 E0 C"led" Q3000000
+M150 P0 C"led" W144        ; define 144 LED NeoPixel strip
+M150 P0 R0 U0 B20            ; soft blue startup color
 
 ;| IO_0 | Reserved | IO_0 shares resources with PanelDue and won't be used directly in this build  |
 ;| IO_1 | Reserved | IO_1 shares resources with RS485 (modbus) which is needed for spindle control |
