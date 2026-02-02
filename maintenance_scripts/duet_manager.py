@@ -56,7 +56,12 @@ def check_drift(silent=False):
 
     for folder in TARGET_FOLDERS:
         local_folder = REPO_ROOT / folder
-        local_files = {f.name for f in local_folder.glob('*.[gc]*')}
+        # If the local target folder doesn't exist, treat it as empty
+        if not local_folder.exists():
+            local_files = set()
+        else:
+            # Include all files in the target folders (no filetype restriction)
+            local_files = {f.name for f in local_folder.iterdir() if f.is_file()}
 
         try:
             r = requests.get(get_url("rr_filelist", f"dir=0:/{folder}"), timeout=10)
@@ -75,13 +80,18 @@ def check_drift(silent=False):
 
         for f in (local_files & remote_files):
             resp = requests.get(get_url("rr_download", f"name=0:/{folder}/{f}"))
-            if resp.status_code == 200:
-                # Read local using 'newline=""' to prevent Windows from altering \n
-                with open(local_folder / f, 'r', encoding='utf-8', newline='') as lf:
-                    local_text = lf.read().splitlines()
+            if resp.status_code != 200:
+                continue
 
-                # Use .text.splitlines() for comparison (splitlines is newline-agnostic)
-                remote_text = resp.text.splitlines()
+            remote_bytes = resp.content
+            local_path = local_folder / f
+
+            # Try a text comparison first (newline-insensitive). If decoding fails,
+            # fall back to a strict binary comparison for non-text files.
+            try:
+                remote_text = remote_bytes.decode('utf-8').splitlines()
+                with open(local_path, 'r', encoding='utf-8', newline='') as lf:
+                    local_text = lf.read().splitlines()
 
                 if local_text != remote_text:
                     modified.append((folder, f))
@@ -90,6 +100,13 @@ def check_drift(silent=False):
                         for line in difflib.unified_diff(remote_text, local_text, n=0):
                             if line.startswith(('+', '-')) and not line.startswith(('+++', '---')):
                                 print(f"    {line}")
+            except UnicodeDecodeError:
+                # Binary file comparison
+                local_bytes = local_path.read_bytes()
+                if local_bytes != remote_bytes:
+                    modified.append((folder, f))
+                    if not silent:
+                        print(f"⚠ DRIFT: {folder}/{f} (binary differs)")
 
     if not silent and not (orphans or staged or modified):
         print("✓ Everything is in sync.")
