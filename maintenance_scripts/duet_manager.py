@@ -38,8 +38,9 @@ def backup_machine():
                 if r.status_code == 200:
                     for f_info in r.json().get('files', []):
                         fname = f_info['name']
+                        # Download using utf-8 to ensure character integrity
                         f_content = requests.get(get_url("rr_download", f"name=0:/{folder}/{fname}"))
-                        backup_zip.writestr(f"{folder}/{fname}", f_content.text)
+                        backup_zip.writestr(f"{folder}/{fname}", f_content.text.encode('utf-8'))
         print("✓ Backup complete.")
         return True
     except Exception as e:
@@ -47,16 +48,11 @@ def backup_machine():
         return False
 
 def check_drift(silent=False):
-    """
-    Symmetric comparison.
-    Returns: (orphans_on_machine, staged_in_git, modified_files)
-    """
+    """Symmetric comparison with UTF-8 support."""
     if not silent:
         print(f"\n--- Checking Drift (Machine: {DUET_HOST}) ---")
     
-    orphans = []   # On machine, not in Git
-    staged = []    # In Git, not on machine
-    modified = []  # In both, but different
+    orphans, staged, modified = [], [], []
 
     for folder in TARGET_FOLDERS:
         local_folder = REPO_ROOT / folder
@@ -71,7 +67,6 @@ def check_drift(silent=False):
         except Exception:
             continue
 
-        # Find Differences
         for f in (local_files - remote_files):
             staged.append((folder, f))
             if not silent: print(f"[STAGED] {folder}/{f} (Local only)")
@@ -83,7 +78,8 @@ def check_drift(silent=False):
         for f in (local_files & remote_files):
             resp = requests.get(get_url("rr_download", f"name=0:/{folder}/{f}"))
             if resp.status_code == 200:
-                local_text = (local_folder / f).read_text().splitlines()
+                # Force UTF-8 for reading local files
+                local_text = (local_folder / f).read_text(encoding='utf-8').splitlines()
                 remote_text = resp.text.splitlines()
                 if local_text != remote_text:
                     modified.append((folder, f))
@@ -107,8 +103,12 @@ def push_to_machine():
     if backup_machine():
         for folder in TARGET_FOLDERS:
             for local_file in (REPO_ROOT / folder).glob('*.[gc]*'):
-                with open(local_file, 'rb') as f:
-                    requests.post(get_url("rr_upload", f"name=0:/{folder}/{local_file.name}"), data=f)
+                # Read with UTF-8, then post as bytes
+                content = local_file.read_text(encoding='utf-8')
+                requests.post(
+                    get_url("rr_upload", f"name=0:/{folder}/{local_file.name}"), 
+                    data=content.encode('utf-8')
+                )
                 print(f"  Pushed: {local_file.name}")
         print("✓ Push complete.")
 
@@ -118,10 +118,10 @@ def pull_from_machine():
     
     to_pull = orphans + modified
     if not to_pull:
-        print("\nNothing to pull. Machine and Git are identical (or Git has extra files).")
+        print("\nNothing to pull.")
         return
 
-    print(f"\nFound {len(to_pull)} items to pull from machine to local repository.")
+    print(f"\nFound {len(to_pull)} items to pull.")
     confirm = input("OVERWRITE Local Git files with Machine versions? (y/n): ")
     if confirm.lower() != 'y': return
 
@@ -129,9 +129,12 @@ def pull_from_machine():
         resp = requests.get(get_url("rr_download", f"name=0:/{folder}/{name}"))
         if resp.status_code == 200:
             local_path = REPO_ROOT / folder / name
-            local_path.write_text(resp.text)
+            # Ensure folder exists (useful for newly pulled orphans)
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            # FORCE UTF-8 WRITING
+            local_path.write_text(resp.text, encoding='utf-8')
             print(f"  Pulled: {folder}/{name}")
-    print("✓ Pull complete. Use 'git status' to review and commit changes.")
+    print("✓ Pull complete.")
 
 # 3. INTERFACE
 
@@ -140,14 +143,13 @@ def main_menu():
         print("\n" + "="*45)
         print(f" DUET 3 MB6HC MANAGER | HOST: {DUET_HOST}")
         print("="*45)
-        print("1. [D]rift Check        (Status)")
-        print("2. [B]ackup Machine     (Snapshot to ZIP)")
-        print("3. [P]ush to Machine    (Git -> Machine)")
-        print("4. [L]oad from Machine  (Machine -> Git)")
+        print("1. [D]rift Check")
+        print("2. [B]ackup Machine")
+        print("3. [P]ush to Machine")
+        print("4. [L]oad from Machine")
         print("5. [E]xit")
         
         choice = input("\nSelection: ").strip().lower()
-        
         if choice in ['1', 'd']: check_drift()
         elif choice in ['2', 'b']: backup_machine()
         elif choice in ['3', 'p']: push_to_machine()
@@ -156,7 +158,7 @@ def main_menu():
 
 if __name__ == "__main__":
     if not DUET_HOST:
-        print("ERROR: DUET_HOST not found in .env root.")
+        print("ERROR: DUET_HOST not found.")
     else:
         try:
             main_menu()
