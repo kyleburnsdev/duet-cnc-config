@@ -38,9 +38,9 @@ def backup_machine():
                 if r.status_code == 200:
                     for f_info in r.json().get('files', []):
                         fname = f_info['name']
-                        # Download using utf-8 to ensure character integrity
-                        f_content = requests.get(get_url("rr_download", f"name=0:/{folder}/{fname}"))
-                        backup_zip.writestr(f"{folder}/{fname}", f_content.text.encode('utf-8'))
+                        # Use .content (raw bytes) to avoid newline translation
+                        f_resp = requests.get(get_url("rr_download", f"name=0:/{folder}/{fname}"))
+                        backup_zip.writestr(f"{folder}/{fname}", f_resp.content)
         print("✓ Backup complete.")
         return True
     except Exception as e:
@@ -48,7 +48,7 @@ def backup_machine():
         return False
 
 def check_drift(silent=False):
-    """Symmetric comparison with UTF-8 support."""
+    """Symmetric comparison with newline-insensitive logic."""
     if not silent:
         print(f"\n--- Checking Drift (Machine: {DUET_HOST}) ---")
     
@@ -62,10 +62,8 @@ def check_drift(silent=False):
             r = requests.get(get_url("rr_filelist", f"dir=0:/{folder}"), timeout=10)
             if r.status_code == 200:
                 remote_files = {f['name'] for f in r.json().get('files', []) if f['type'] == 'f'}
-            else:
-                continue
-        except Exception:
-            continue
+            else: continue
+        except Exception: continue
 
         for f in (local_files - remote_files):
             staged.append((folder, f))
@@ -78,9 +76,13 @@ def check_drift(silent=False):
         for f in (local_files & remote_files):
             resp = requests.get(get_url("rr_download", f"name=0:/{folder}/{f}"))
             if resp.status_code == 200:
-                # Force UTF-8 for reading local files
-                local_text = (local_folder / f).read_text(encoding='utf-8').splitlines()
+                # Read local using 'newline=""' to prevent Windows from altering \n
+                with open(local_folder / f, 'r', encoding='utf-8', newline='') as lf:
+                    local_text = lf.read().splitlines()
+                
+                # Use .text.splitlines() for comparison (splitlines is newline-agnostic)
                 remote_text = resp.text.splitlines()
+                
                 if local_text != remote_text:
                     modified.append((folder, f))
                     if not silent:
@@ -103,17 +105,14 @@ def push_to_machine():
     if backup_machine():
         for folder in TARGET_FOLDERS:
             for local_file in (REPO_ROOT / folder).glob('*.[gc]*'):
-                # Read with UTF-8, then post as bytes
-                content = local_file.read_text(encoding='utf-8')
-                requests.post(
-                    get_url("rr_upload", f"name=0:/{folder}/{local_file.name}"), 
-                    data=content.encode('utf-8')
-                )
+                # Read raw bytes to preserve exact file structure
+                with open(local_file, 'rb') as f:
+                    requests.post(get_url("rr_upload", f"name=0:/{folder}/{local_file.name}"), data=f)
                 print(f"  Pushed: {local_file.name}")
         print("✓ Push complete.")
 
 def pull_from_machine():
-    """Accept Machine version as the new Source of Truth."""
+    """Accept Machine version as Source of Truth, preserving Unix line endings."""
     orphans, staged, modified = check_drift(silent=False)
     
     to_pull = orphans + modified
@@ -129,15 +128,16 @@ def pull_from_machine():
         resp = requests.get(get_url("rr_download", f"name=0:/{folder}/{name}"))
         if resp.status_code == 200:
             local_path = REPO_ROOT / folder / name
-            # Ensure folder exists (useful for newly pulled orphans)
             local_path.parent.mkdir(parents=True, exist_ok=True)
-            # FORCE UTF-8 WRITING
-            local_path.write_text(resp.text, encoding='utf-8')
+            
+            # Use binary write mode ('wb') to save the exact bytes from the Duet
+            # This prevents Windows from adding extra \r characters.
+            with open(local_path, 'wb') as f:
+                f.write(resp.content)
             print(f"  Pulled: {folder}/{name}")
     print("✓ Pull complete.")
 
-# 3. INTERFACE
-
+# 3. INTERFACE (Standard Menu)
 def main_menu():
     while True:
         print("\n" + "="*45)
