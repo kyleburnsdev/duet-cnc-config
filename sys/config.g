@@ -7,8 +7,6 @@
 ; General
 G90 ; absolute coordinates
 G21 ; Set units to millimeters
-M83 ; relative extruder moves
-M563 P0 D-1 ; there's no extruder, so disable mapping
 M550 P"reprap" ; set machine name
 M553 S"reprap" ; Set hostname
 
